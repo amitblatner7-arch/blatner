@@ -14,7 +14,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: התקנת ספריות
-        run: pip install il-supermarket-scarper requests
+        run: pip install il-supermarket-scraper requests
       - name: משיכת מחירים ועדכון Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
