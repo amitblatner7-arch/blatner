@@ -196,7 +196,16 @@ def fetch_chain(key):
     return prices, promos
 
 
-def upsert(rows):
+def upsert_chain(prices, promos, col):
+    """כותב רק את עמודת המחיר של הרשת הזו (col='victory' או 'yohananof').
+    עמודת הרשת השנייה לא נכללת ב-payload → נשמרת כמו שהיא (מיזוג בטוח, בלי דריסה)."""
+    rows = [{
+        "barcode": bc, "name": d["name"], "dept": guess_dept(d["name"]),
+        col: round(d["price"], 2), "sale": promos.get(bc),
+    } for bc, d in prices.items()]
+    if not rows:
+        print(f"  אין מה לעדכן ל-{col}")
+        return
     url = f"{SUPABASE_URL}/rest/v1/products"
     headers = {"apikey": SERVICE_KEY, "Authorization": f"Bearer {SERVICE_KEY}",
                "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates"}
@@ -204,26 +213,17 @@ def upsert(rows):
         chunk = rows[i:i + 500]
         r = requests.post(url, headers=headers, data=json.dumps(chunk))
         r.raise_for_status()
-        print(f"upserted {i + len(chunk)}/{len(rows)}")
+        print(f"  {col}: upserted {i + len(chunk)}/{len(rows)}")
 
 
 def main():
-    vp, vpr = fetch_chain("victory")
-    yp, ypr = fetch_chain("yohananof")
-    barcodes = set(vp) | set(yp)
-    rows = []
-    for bc in barcodes:
-        v, y = vp.get(bc), yp.get(bc)
-        name = (v or y)["name"]
-        rows.append({
-            "barcode": bc, "name": name, "dept": guess_dept(name),
-            "victory": round(v["price"], 2) if v else None,
-            "yohananof": round(y["price"], 2) if y else None,
-            "sale": vpr.get(bc) or ypr.get(bc),
-        })
-    print(f"\nסה\"כ {len(rows)} מוצרים לעדכון")
-    if rows:
-        upsert(rows)
+    # ONLY_CHAIN=victory → רק ויקטורי (להרצה מקומית). ריק → כל הרשתות (GitHub).
+    only = os.environ.get("ONLY_CHAIN", "").strip().lower()
+    chains = [only] if only in CHAINS else list(CHAINS.keys())
+    print(f"רשתות להרצה: {chains}")
+    for key in chains:
+        prices, promos = fetch_chain(key)
+        upsert_chain(prices, promos, CHAINS[key]["col"])
     print("done")
 
 
