@@ -1,0 +1,22 @@
+name: עדכון מחירים יומי
+
+on:
+  schedule:
+    - cron: '0 4 * * *'   # כל יום ב-06:00 שעון ישראל (04:00 UTC)
+  workflow_dispatch: {}    # מאפשר גם הרצה ידנית מכפתור ב-GitHub
+
+jobs:
+  update-prices:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: התקנת ספריות
+        run: pip install il-supermarket-scarper requests
+      - name: משיכת מחירים ועדכון Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python app/tools/fetch_prices.py
