@@ -27,25 +27,28 @@ from il_supermarket_scarper.utils.file_types import FileTypesFilters
 SUPABASE_URL = os.environ["SUPABASE_URL"].rstrip("/")
 SERVICE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 
-# לכל רשת: שמות ה-scraper (מחרוזות!), רמזים לזיהוי הסניף, ומזהה-חנות אופציונלי מ-env
+WANT = [FileTypesFilters.STORE_FILE.name,
+        FileTypesFilters.PRICE_FULL_FILE.name,
+        FileTypesFilters.PROMO_FULL_FILE.name]
+
+# לכל רשת: שמות ה-scraper (מחרוזות!), רמזים לזיהוי הסניף, מזהה-חנות אופציונלי מ-env,
+# ו-file_types: אילו סוגי קבצים לבקש. None = כל הסוגים (בלי סינון מוקדם — למקור החדש של ויקטורי).
 CHAINS = {
     "victory": {
-        "scrapers": ["VICTORY", "VICTORY_NEW_SOURCE"],
+        "scrapers": ["VICTORY_NEW_SOURCE"],
         "hints": ["צמח"],
         "store_id_env": "VICTORY_STORE_ID",
+        "file_types": None,   # בלי סינון מוקדם — ה-API של laibcatalog מפיל הכל אחרת
         "col": "victory",
     },
     "yohananof": {
         "scrapers": ["YOHANANOF"],
         "hints": ["אדיסון", "אשדות"],
         "store_id_env": "YOHANANOF_STORE_ID",
+        "file_types": WANT,
         "col": "yohananof",
     },
 }
-
-WANT = [FileTypesFilters.STORE_FILE.name,
-        FileTypesFilters.PRICE_FULL_FILE.name,
-        FileTypesFilters.PROMO_FULL_FILE.name]
 
 DEPT_RULES = [
     (r"ירק|פרי|פירות|עשבי", "ירקות ופירות"),
@@ -89,15 +92,17 @@ def txt(el, *tags):
     return ""
 
 
-def scrape(scraper_names, base):
-    """מוריד קבצים לרשת. מנסה כל scraper עד שמתקבלים קבצים."""
+def scrape(scraper_names, base, file_types):
+    """מוריד קבצים לרשת. מנסה כל scraper. file_types=None → כל הסוגים (בלי סינון)."""
     for name in scraper_names:
         try:
-            task = ScarpingTask(
-                enabled_scrapers=[name],
-                files_types=WANT,
-                output_configuration={"output_mode": "disk", "base_storage_path": base},
-            )
+            kwargs = {
+                "enabled_scrapers": [name],
+                "output_configuration": {"output_mode": "disk", "base_storage_path": base},
+            }
+            if file_types is not None:
+                kwargs["files_types"] = file_types
+            task = ScarpingTask(**kwargs)
             task.start()
             task.join()
         except Exception as e:
@@ -169,8 +174,10 @@ def fetch_chain(key):
     cfg = CHAINS[key]
     base = f"dumps_{key}"
     print(f"\n=== {key} ===")
-    files = scrape(cfg["scrapers"], base)
+    files = scrape(cfg["scrapers"], base, cfg.get("file_types", WANT))
     print(f"downloaded {len(files)} files")
+    for f in files[:6]:
+        print(f"  file sample: {os.path.basename(f)}")
     forced = os.environ.get(cfg["store_id_env"], "").strip()
     sid, desc, all_stores = find_store(files, cfg["hints"], forced)
     if not sid:
