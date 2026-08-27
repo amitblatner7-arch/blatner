@@ -55,6 +55,7 @@ CHAINS = {
 
 # כללי הסיווג יושבים במודול נפרד ומשותף — ראו dept_rules.py.
 from dept_rules import guess_dept
+from product_names import clean_name
 def open_xml(path):
     try:
         if path.endswith(".gz"):
@@ -74,16 +75,7 @@ def txt(el, *tags):
     return ""
 
 
-def clean_name(name):
-    """מנקה שם מוצר: רווחים כפולים, איות יחידות מידה קטומות (גרם/ליטר),
-    והסרת אותיות בודדות תלויות בסוף השם שנקטמו כבר במקור אצל הרשת."""
-    name = re.sub(r"\s+", " ", name).strip()
-    name = re.sub(r"([0-9]) ג$", r"\1 גרם", name)
-    name = re.sub(r"([0-9]) ל$", r"\1 ליטר", name)
-    name = re.sub(r" [א-ת]$", "", name).strip()
-    return name
-
-
+# ניקוי השמות יושב במודול משותף — ראו product_names.py.
 def scrape(scraper_names, base, file_types):
     """מוריד קבצים לרשת. מנסה כל scraper. file_types=None → כל הסוגים (בלי סינון)."""
     for name in scraper_names:
