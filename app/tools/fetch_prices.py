@@ -56,6 +56,7 @@ CHAINS = {
 # כללי הסיווג יושבים במודול נפרד ומשותף — ראו dept_rules.py.
 from dept_rules import guess_dept
 from product_names import clean_name
+import sales
 def open_xml(path):
     try:
         if path.endswith(".gz"):
@@ -183,9 +184,19 @@ def fetch_chain(key):
 def upsert_chain(prices, promos, col):
     """כותב רק את עמודת המחיר של הרשת הזו (col='victory' או 'yohananof').
     עמודת הרשת השנייה לא נכללת ב-payload → נשמרת כמו שהיא (מיזוג בטוח, בלי דריסה)."""
+    # המבצעים ממוזגים ולא נדרסים — ראו sales.py
+    def _get(url):
+        r = requests.get(url, headers={"apikey": SERVICE_KEY,
+                                       "Authorization": f"Bearer {SERVICE_KEY}"}, timeout=60)
+        r.raise_for_status()
+        return r.json()
+
+    existing = sales.fetch_existing(_get, SUPABASE_URL, prices.keys())
+    chain = "victory" if col == "victory" else "yohananof"
     rows = [{
         "barcode": bc, "name": d["name"], "dept": guess_dept(d["name"]),
-        col: round(d["price"], 2), "sale": promos.get(bc),
+        col: round(d["price"], 2),
+        "sale": sales.merge(existing.get(bc), chain, promos.get(bc)),
     } for bc, d in prices.items()]
     if not rows:
         print(f"  אין מה לעדכן ל-{col}")
