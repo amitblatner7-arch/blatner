@@ -24,10 +24,11 @@ import requests
 from il_supermarket_scarper import ScarpingTask
 from il_supermarket_scarper.utils.file_types import FileTypesFilters
 
-# strip() חובה: מפתח שהודבק ל-GitHub Secrets עם ירידת שורה או רווח בסוף
-# מפיל את requests עם InvalidHeader עוד לפני שהבקשה נשלחת.
-SUPABASE_URL = os.environ["SUPABASE_URL"].strip().rstrip("/")
-SERVICE_KEY = os.environ["SUPABASE_SERVICE_KEY"].strip()
+# ניקוי כל רווח מהמפתח, לא רק בקצוות. Supabase מציג את המפתח שבור לשתי
+# שורות, וההעתקה ממנו מכניסה ירידת שורה לאמצע הערך. requests נופל על זה
+# עם InvalidHeader עוד לפני שהבקשה יוצאת.
+SUPABASE_URL = "".join(os.environ["SUPABASE_URL"].split()).rstrip("/")
+SERVICE_KEY = "".join(os.environ["SUPABASE_SERVICE_KEY"].split())
 
 WANT = [FileTypesFilters.STORE_FILE.name,
         FileTypesFilters.PRICE_FULL_FILE.name,
