@@ -16,8 +16,25 @@
 ערך ישן שאינו JSON נזרק — ממילא אי אפשר לדעת לאיזו רשת הוא שייך.
 """
 import json
+import re
+
+# הרשתות כותבות את תיאור המבצע דבוק למחיר: "47.90חזה עוף טרי".
+# מפרידים בין ספרה לאות ובין אות לספרה, בלי לשנות את סדר המילים.
+_DIGIT_LETTER = re.compile(r"(?<=[0-9])(?=[א-ת])")
+_LETTER_DIGIT = re.compile(r"(?<=[א-ת])(?=[0-9])")
+_SPACES = re.compile(r"\s+")
 
 CHAIN_KEY = {"victory": "victory", "yohananof": "yohananof"}
+
+
+def clean_promo(text):
+    """מנקה תיאור מבצע כך שיהיה קריא על המסך."""
+    if not text:
+        return None
+    t = _DIGIT_LETTER.sub(" ", text)
+    t = _LETTER_DIGIT.sub(" ", t)
+    t = _SPACES.sub(" ", t).strip(" -·,")
+    return t or None
 
 
 def parse(raw):
@@ -37,6 +54,7 @@ def merge(existing_raw, chain, promo_text):
     """מחזיר את הערך החדש לעמודה: הקיים, כשהמפתח של הרשת הזו מעודכן."""
     data = parse(existing_raw)
     key = CHAIN_KEY.get(chain, chain)
+    promo_text = clean_promo(promo_text)
     if promo_text:
         data[key] = promo_text
     else:
