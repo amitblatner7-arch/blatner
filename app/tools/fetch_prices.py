@@ -25,7 +25,7 @@ from il_supermarket_scarper import ScarpingTask
 from il_supermarket_scarper.utils.file_types import FileTypesFilters
 
 SUPABASE_URL = os.environ["SUPABASE_URL"].rstrip("/").strip()
-SERVICE_KEY = os.environ["SUPABASE_SERVICE_KEY"].strip()
+SERVICE_KEY = os.environ["SUPABASE_SERVICE_KEY"].strip().replace("\n","").replace("\r","").replace(" ","")
 
 WANT = [FileTypesFilters.STORE_FILE.name,
         FileTypesFilters.PRICE_FULL_FILE.name,
